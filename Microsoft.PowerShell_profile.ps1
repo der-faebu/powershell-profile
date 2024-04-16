@@ -23,7 +23,7 @@ function Get-StringHash {
     $writer.write($InputString)
     $writer.Flush()
     $stringAsStream.Position = 0
-    return Get-FileHash -InputStream $stringAsStream
+    return (Get-FileHash -InputStream $stringAsStream).Hash
 }
 
 function Update-PSProfileFromGitHub {
@@ -33,15 +33,17 @@ function Update-PSProfileFromGitHub {
         $url = "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
         Invoke-RestMethod $url -OutFile "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
         $oldhash = Get-StringHash (Get-Content $PROFILE) -ErrorAction Stop
+        Write-Host "Old hash: $oldhash" -ForegroundColor Cyan
         $newhash = Get-StringHash (Get-Content "$temp/Microsoft.PowerShell_profile.ps1") 
+        Write-Host "New hash: $newhash" -ForegroundColor Cyan
         $retries = 0
-        if ($newhash.Hash -eq $oldhash.Hash) {
+        if ($newhash -eq $oldhash) {
             Write-Host "Profile is up to date" -ForegroundColor Green
         }
         else {
             Write-Host "Spotted some differences. Fetching newest version from GitHub..." -ForegroundColor Yellow
             while ($retries -le 3) {
-                Get-Content "$temp/Microsoft.PowerShell_profile.ps1" | Set-Content -Path $PROFILE
+                Copy-Item "$temp/Microsoft.PowerShell_profile.ps1" -Destination $PROFILE -Force
                 . $PROFILE
                 $retries++
                 Write-Host "Profile has been updated." -ForegroundColor Green
