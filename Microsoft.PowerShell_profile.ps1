@@ -19,8 +19,8 @@ try{
     Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
     $url = "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
     Invoke-RestMethod $url -OutFile "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
-    $oldhash = Get-FileHash $PROFILE -ErrorAction SilentlyContinue # don't care if $PROFILE doesn't exist
-    $newhash = Get-FileHash "$tempcls/Microsoft.PowerShell_profile.ps1"
+    $oldhash = Get-FileHash $PROFILE -ErrorAction Stop # don't care if $PROFILE doesn't exist
+    $newhash = Get-FileHash "$temp/Microsoft.PowerShell_profile.ps1"
     if ($newhash -ne $oldhash) {
         Get-Content "$temp/Microsoft.PowerShell_profile.ps1" | Set-Content $PROFILE
         . $PROFILE
