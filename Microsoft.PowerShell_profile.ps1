@@ -15,7 +15,8 @@
 
 #check for updates
 try{
-    $url = "https://raw.githubusercontent.com/ChrisTitusTech/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
+    Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
+    $url = "https://github.com/der-faebu/powershell-profile/raw/main/setup.ps1/main/Microsoft.PowerShell_profile.ps1"
     $oldhash = Get-FileHash $PROFILE
     Invoke-RestMethod $url -OutFile "$env:temp/Microsoft.PowerShell_profile.ps1"
     $newhash = Get-FileHash "$env:temp/Microsoft.PowerShell_profile.ps1"
@@ -51,12 +52,14 @@ function sha1 { Get-FileHash -Algorithm SHA1 $args }
 function sha256 { Get-FileHash -Algorithm SHA256 $args }
 
 # Quick shortcut to start notepad
+function n++ { notepad++ $args }
 function n { notepad $args }
 
 # Drive shortcuts
 function HKLM: { Set-Location HKLM: }
 function HKCU: { Set-Location HKCU: }
 function Env: { Set-Location Env: }
+function home: { Set-Location $env:HOMEPATH }
 
 # Creates drive shortcut for Work Folders, if current user account is using it
 if (Test-Path "$env:USERPROFILE\Work Folders") {
