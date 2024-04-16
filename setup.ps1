@@ -13,9 +13,9 @@ if (!(Test-Path -Path $PROFILE -PathType Leaf)) {
             }
         }
 
-        Invoke-RestMethod https://github.com/ChrisTitusTech/powershell-profile/raw/main/Microsoft.PowerShell_profile.ps1 -OutFile $PROFILE
+        Invoke-RestMethod https://github.com/der-faebu/powershell-profile/raw/main/Microsoft.PowerShell_profile.ps1 -OutFile $PROFILE
         Write-Host "The profile @ [$PROFILE] has been created."
-        write-host "if you want to add any persistent components, please do so at
+        Write-host "if you want to add any persistent components, please do so at
         [$HOME\Documents\PowerShell\Profile.ps1] as there is an updater in the installed profile 
         which uses the hash to update the profile and will lead to loss of changes"
     }
@@ -24,22 +24,34 @@ if (!(Test-Path -Path $PROFILE -PathType Leaf)) {
     }
 }
 # If the file already exists, show the message and do nothing.
- else {
-		 Get-Item -Path $PROFILE | Move-Item -Destination oldprofile.ps1 -Force
-		 Invoke-RestMethod https://github.com/ChrisTitusTech/powershell-profile/raw/main/Microsoft.PowerShell_profile.ps1 -OutFile $PROFILE
-		 Write-Host "The profile @ [$PROFILE] has been created and old profile removed."
-         write-host "Please back up any persistent components of your old profile to [$HOME\Documents\PowerShell\Profile.ps1]
+else {
+    Get-Item -Path $PROFILE | Move-Item -Destination oldprofile.ps1 -Force
+    Invoke-RestMethod https://github.com/der-faebu/powershell-profile/raw/main/Microsoft.PowerShell_profile.ps1 -OutFile $PROFILE
+    Write-Host "The profile @ [$PROFILE] has been created and old profile removed."
+    write-host "Please back up any persistent components of your old profile to [$HOME\Documents\PowerShell\Profile.ps1]
          as there is an updater in the installed profile which uses the hash to update the profile 
          and will lead to loss of changes"
- }
-& $profile
+}
+
+# Choco install
+#
+try {
+    Write-Host  "Testing for choco..." -ForegroundColor Cyan
+    choco --version
+    Write-Host "Chocolatey is already installed." -ForegroundColor Green
+}
+catch {
+    Write-Host "Chocolatey is not installed yet. Installing..." -ForegroundColor Red
+    Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+}
 
 # OMP Install
-#
-winget install -e --accept-source-agreements --accept-package-agreements JanDeDobbeleer.OhMyPosh
+choco install -y oh-my-posh
 
 # Font Install
 # Get all installed font families
+Write-Host  "Handling fonts..." -ForegroundColor Cyan
+
 [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
 $fontFamilies = (New-Object System.Drawing.Text.InstalledFontCollection).Families
 
@@ -65,10 +77,11 @@ if ($fontFamilies -notcontains "CaskaydiaCove NF") {
 }
 
 
-# Choco install
-#
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-
 # Terminal Icons Install
 #
+Write-Host  "Installing Terminal-Icons module..." -ForegroundColor Cyan
+
 Install-Module -Name Terminal-Icons -Repository PSGallery -Force
+
+Write-Host  "Importing `$Profile..." -ForegroundColor Cyan
+& $profile
