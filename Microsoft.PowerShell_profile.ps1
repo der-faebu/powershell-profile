@@ -39,10 +39,12 @@ function Update-PSProfileFromGitHub {
             Write-Host "Profile is up to date" -ForegroundColor Green
         }
         else {
+            Write-Host "Spotted some differences. Fetching newest version from GitHub..." -ForegroundColor Yellow
             while ($retries -le 3) {
                 Get-Content "$temp/Microsoft.PowerShell_profile.ps1" | Set-Content -Path $PROFILE
                 . $PROFILE
                 $retries++
+                Write-Host "Profile has been updated." -ForegroundColor Green
                 return
             }
             Write-Error "Could not update Profile after 3 retries."
