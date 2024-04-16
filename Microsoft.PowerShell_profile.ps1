@@ -152,8 +152,8 @@ function Edit-Profile {
 
 # We don't need these any more; they were just temporary variables to get to $isAdmin. 
 # Delete them to prevent cluttering up the user profile. 
-Remove-Variable identity
-Remove-Variable principal
+Remove-Variable identity -ErrorAction SilentlyContinue
+Remove-Variable principal -ErrorAction SilentlyContinue
 
 Function Test-CommandExists {
     Param ($command)
