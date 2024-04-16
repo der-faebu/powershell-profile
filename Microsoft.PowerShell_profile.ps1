@@ -87,7 +87,8 @@ function ex ($argList){
 }
 
 function desk { Set-Location "$HOME\Desktop" }
-function home { Set-Location $HOME }
+function home { Set-Location $HOME } 
+function tmp { Set-Location "c:\tmp"} 
 function dl { Set-Location "$HOME\Downloads" }
 # Creates drive shortcut for Work Folders, if current user account is using it
 if (Test-Path "$env:USERPROFILE\Work Folders") {
