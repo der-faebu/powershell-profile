@@ -14,12 +14,13 @@
 ### more information about execution policies, run Get-Help about_Execution_Policies.
 
 #check for updates
+$temp = [System.IO.Path]::GetTempPath()
 try{
     Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
     $url = "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
-    Invoke-RestMethod $url -OutFile "$env:temp/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
+    Invoke-RestMethod $url -OutFile "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
     $oldhash = Get-FileHash $PROFILE -ErrorAction SilentlyContinue # don't care if $PROFILE doesn't exist
-    $newhash = Get-FileHash "$env:temp/Microsoft.PowerShell_profile.ps1"
+    $newhash = Get-FileHash "$tempcls/Microsoft.PowerShell_profile.ps1"
     if ($newhash -ne $oldhash) {
         Get-Content "$env:temp/Microsoft.PowerShell_profile.ps1" | Set-Content $PROFILE
         . $PROFILE
