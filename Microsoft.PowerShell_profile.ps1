@@ -15,6 +15,9 @@
 function Update-PSProfileFromGitHub {
     $temp = [System.IO.Path]::GetTempPath()
     try {
+        if(-not (Test-Path $PROFILE)){
+            New-Item $PROFILE -ItemType File
+        }
         Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
         $url = "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
         Invoke-RestMethod $url -OutFile "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
@@ -181,7 +184,7 @@ elseif (Test-CommandExists sublime_text) {
 Set-Alias -Name vim -Value $EDITOR
 
 function ll { Get-ChildItem -Path $pwd -File }
-function g { Set-Location $HOME\Documents\Github }
+function repos { Set-Location c:\repos }
 function gcom {
     git add .
     git commit -m "$args"
@@ -191,7 +194,7 @@ function lazyg {
     git commit -m "$args"
     git push
 }
-function Get-PubIP {
+function Get-PublicIP {
     (Invoke-WebRequest http://ifconfig.me/ip ).Content
 }
 function uptime {
@@ -205,10 +208,10 @@ function uptime {
     }
 }
 
-function Import-Profile {
+function Import-PSProfile {
     & $profile
 }
-function Find-file($name) {
+function Find-File($name) {
     Get-ChildItem -recurse -filter "*${name}*" -ErrorAction SilentlyContinue | ForEach-Object {
         $place_path = $_.directory
         Write-Output "${place_path}\${_}"
