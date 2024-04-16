@@ -31,7 +31,7 @@ catch {
     Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
 }
 Remove-Variable @("newhash", "oldhash", "url") -ErrorAction SilentlyContinue
-Remove-Item  "$env:temp/Microsoft.PowerShell_profile.ps1"
+Remove-Item  "$env:temp/Microsoft.PowerShell_profile.ps1" -ErrorAction SilentlyContinue
 
 # Import Terminal Icons
 Import-Module -Name Terminal-Icons
