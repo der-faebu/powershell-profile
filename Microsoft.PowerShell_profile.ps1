@@ -13,20 +13,39 @@
 ### This is the default policy on Windows Server 2012 R2 and above for server Windows. For 
 ### more information about execution policies, run Get-Help about_Execution_Policies.
 
+function Get-StringHash {
+    param (
+        $InputString
+    )
 
-function Update-PSProfile {
-    #check for updates
+    $stringAsStream = [System.IO.MemoryStream]::new()
+    $writer = [System.IO.StreamWriter]::new($stringAsStream)
+    $writer.write($InputString)
+    $writer.Flush()
+    $stringAsStream.Position = 0
+    return Get-FileHash -InputStream $stringAsStream
+}
+
+function Update-PSProfileFromGitHub {
     $temp = [System.IO.Path]::GetTempPath()
-    try{
+    try {
         Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
         $url = "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
         Invoke-RestMethod $url -OutFile "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
-        $oldhash = Get-FileHash $PROFILE -ErrorAction Stop
-        $newhash = Get-FileHash "$temp/Microsoft.PowerShell_profile.ps1"
-        if ($newhash -ne $oldhash) {
-            Get-Content "$temp/Microsoft.PowerShell_profile.ps1" | Set-Content -Path $PROFILE
-            . $PROFILE
-            return
+        $oldhash = Get-StringHash (Get-Content $PROFILE) -ErrorAction Stop
+        $newhash = Get-StringHash (Get-Content "$temp/Microsoft.PowerShell_profile.ps1") 
+        $retries = 0
+        if ($newhash.Hash -eq $oldhash.Hash) {
+            Write-Host "Profile is up to date" -ForegroundColor Green
+        }
+        else {
+            while ($retries -le 3) {
+                Get-Content "$temp/Microsoft.PowerShell_profile.ps1" | Set-Content -Path $PROFILE
+                . $PROFILE
+                $retries++
+                return
+            }
+            Write-Error "Could not update Profile after 3 retries."
         }
     }
     catch {
@@ -37,7 +56,6 @@ function Update-PSProfile {
     Remove-Item  "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction SilentlyContinue
 }
 
-    
 
 # Import Terminal Icons
 Import-Module -Name Terminal-Icons
@@ -80,7 +98,8 @@ if (Test-Path "$env:USERPROFILE\Work Folders") {
 function prompt { 
     if ($isAdmin) {
         "[" + (Get-Location) + "] # " 
-    } else {
+    }
+    else {
         "[" + (Get-Location) + "] $ "
     }
 }
@@ -94,7 +113,8 @@ if ($isAdmin) {
 function dirs {
     if ($args.Count -gt 0) {
         Get-ChildItem -Recurse -Include "$args" | Foreach-Object FullName
-    } else {
+    }
+    else {
         Get-ChildItem -Recurse | Foreach-Object FullName
     }
 }
@@ -106,7 +126,8 @@ function admin {
     if ($args.Count -gt 0) {   
         $argList = "& '" + $args + "'"
         Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $argList
-    } else {
+    }
+    else {
         Start-Process "$psHome\powershell.exe" -Verb runAs
     }
 }
@@ -121,7 +142,8 @@ Set-Alias -Name sudo -Value admin
 function Edit-Profile {
     if ($host.Name -match "ise") {
         $psISE.CurrentPowerShellTab.Files.Add($profile.CurrentUserAllHosts)
-    } else {
+    }
+    else {
         notepad $profile.CurrentUserAllHosts
     }
 }
@@ -145,21 +167,28 @@ Function Test-CommandExists {
 # If your favorite editor is not here, add an elseif and ensure that the directory it is installed in exists in your $env:Path
 #
 if (Test-CommandExists nvim) {
-    $EDITOR='nvim'
-} elseif (Test-CommandExists pvim) {
-    $EDITOR='pvim'
-} elseif (Test-CommandExists vim) {
-    $EDITOR='vim'
-} elseif (Test-CommandExists vi) {
-    $EDITOR='vi'
-} elseif (Test-CommandExists code) {
-    $EDITOR='code'
-} elseif (Test-CommandExists notepad) {
-    $EDITOR='notepad'
-} elseif (Test-CommandExists notepad++) {
-    $EDITOR='notepad++'
-} elseif (Test-CommandExists sublime_text) {
-    $EDITOR='sublime_text'
+    $EDITOR = 'nvim'
+}
+elseif (Test-CommandExists pvim) {
+    $EDITOR = 'pvim'
+}
+elseif (Test-CommandExists vim) {
+    $EDITOR = 'vim'
+}
+elseif (Test-CommandExists vi) {
+    $EDITOR = 'vi'
+}
+elseif (Test-CommandExists code) {
+    $EDITOR = 'code'
+}
+elseif (Test-CommandExists notepad) {
+    $EDITOR = 'notepad'
+}
+elseif (Test-CommandExists notepad++) {
+    $EDITOR = 'notepad++'
+}
+elseif (Test-CommandExists sublime_text) {
+    $EDITOR = 'sublime_text'
 }
 Set-Alias -Name vim -Value $EDITOR
 
@@ -180,11 +209,12 @@ function Get-PubIP {
 }
 function uptime {
     #Windows Powershell only
-	If ($PSVersionTable.PSVersion.Major -eq 5 ) {
-		Get-WmiObject win32_operatingsystem |
-        Select-Object @{EXPRESSION={ $_.ConverttoDateTime($_.lastbootuptime)}} | Format-Table -HideTableHeaders
-	} Else {
-        net statistics workstation | Select-String "since" | foreach-object {$_.ToString().Replace('Statistics since ', '')}
+    If ($PSVersionTable.PSVersion.Major -eq 5 ) {
+        Get-WmiObject win32_operatingsystem |
+        Select-Object @{EXPRESSION = { $_.ConverttoDateTime($_.lastbootuptime) } } | Format-Table -HideTableHeaders
+    }
+    Else {
+        net statistics workstation | Select-String "since" | foreach-object { $_.ToString().Replace('Statistics since ', '') }
     }
 }
 
