@@ -13,26 +13,31 @@
 ### This is the default policy on Windows Server 2012 R2 and above for server Windows. For 
 ### more information about execution policies, run Get-Help about_Execution_Policies.
 
-#check for updates
-$temp = [System.IO.Path]::GetTempPath()
-try{
-    Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
-    $url = "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
-    Invoke-RestMethod $url -OutFile "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
-    $oldhash = Get-FileHash $PROFILE -ErrorAction Stop
-    $newhash = Get-FileHash "$temp/Microsoft.PowerShell_profile.ps1"
-    if ($newhash -ne $oldhash) {
-        Get-Content "$temp/Microsoft.PowerShell_profile.ps1" | Set-Content -Path $PROFILE
-        . $PROFILE
-        return
+
+function Update-PSProfile {
+    #check for updates
+    $temp = [System.IO.Path]::GetTempPath()
+    try{
+        Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
+        $url = "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
+        Invoke-RestMethod $url -OutFile "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
+        $oldhash = Get-FileHash $PROFILE -ErrorAction Stop
+        $newhash = Get-FileHash "$temp/Microsoft.PowerShell_profile.ps1"
+        if ($newhash -ne $oldhash) {
+            Get-Content "$temp/Microsoft.PowerShell_profile.ps1" | Set-Content -Path $PROFILE
+            . $PROFILE
+            return
+        }
     }
+    catch {
+        Write-Error "unable to check for `$profile updates"
+        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+    }
+    Remove-Variable @("newhash", "oldhash", "url") -ErrorAction SilentlyContinue
+    Remove-Item  "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction SilentlyContinue
 }
-catch {
-    Write-Error "unable to check for `$profile updates"
-    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
-}
-Remove-Variable @("newhash", "oldhash", "url") -ErrorAction SilentlyContinue
-Remove-Item  "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction SilentlyContinue
+
+    
 
 # Import Terminal Icons
 Import-Module -Name Terminal-Icons
