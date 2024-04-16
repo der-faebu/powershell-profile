@@ -12,7 +12,6 @@
 ###   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 ### This is the default policy on Windows Server 2012 R2 and above for server Windows. For 
 ### more information about execution policies, run Get-Help about_Execution_Policies.
-
 function Update-PSProfileFromGitHub {
     $temp = [System.IO.Path]::GetTempPath()
     try {
@@ -46,7 +45,6 @@ function Update-PSProfileFromGitHub {
     Remove-Variable @("newhash", "oldhash", "url") -ErrorAction SilentlyContinue
     Remove-Item  "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction SilentlyContinue
 }
-
 
 # Import Terminal Icons
 Import-Module -Name Terminal-Icons
@@ -116,10 +114,10 @@ function dirs {
 function admin {
     if ($args.Count -gt 0) {   
         $argList = "& '" + $args + "'"
-        Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $argList
+        Start-Process "wt new-tab --profile 'PowerShell (Admin)' -ArgumentList $argList"
     }
     else {
-        Start-Process "$psHome\powershell.exe" -Verb runAs
+        Start-Process "wt new-tab --profile 'PowerShell (Admin)'"
     }
 }
 
@@ -127,7 +125,6 @@ function admin {
 # with elevated rights. 
 Set-Alias -Name su -Value admin
 Set-Alias -Name sudo -Value admin
-
 
 # Make it easy to edit this profile once it's installed
 function Edit-Profile {
@@ -157,14 +154,14 @@ Function Test-CommandExists {
 #
 # If your favorite editor is not here, add an elseif and ensure that the directory it is installed in exists in your $env:Path
 #
-if (Test-CommandExists nvim) {
-    $EDITOR = 'nvim'
+if (Test-CommandExists vim) {
+    $EDITOR = 'vim'
 }
 elseif (Test-CommandExists pvim) {
     $EDITOR = 'pvim'
 }
-elseif (Test-CommandExists vim) {
-    $EDITOR = 'vim'
+elseif (Test-CommandExists nvim) {
+    $EDITOR = 'nvim'
 }
 elseif (Test-CommandExists vi) {
     $EDITOR = 'vi'
@@ -182,7 +179,6 @@ elseif (Test-CommandExists sublime_text) {
     $EDITOR = 'sublime_text'
 }
 Set-Alias -Name vim -Value $EDITOR
-
 
 function ll { Get-ChildItem -Path $pwd -File }
 function g { Set-Location $HOME\Documents\Github }
@@ -209,10 +205,10 @@ function uptime {
     }
 }
 
-function reload-profile {
+function Import-Profile {
     & $profile
 }
-function find-file($name) {
+function Find-file($name) {
     Get-ChildItem -recurse -filter "*${name}*" -ErrorAction SilentlyContinue | ForEach-Object {
         $place_path = $_.directory
         Write-Output "${place_path}\${_}"
@@ -252,7 +248,7 @@ function pkill($name) {
     Get-Process $name -ErrorAction SilentlyContinue | Stop-Process
 }
 function pgrep($name) {
-    Get-Process $name
+    GASCIIet-Process $name
 }
 
 # Import the Chocolatey Profile that contains the necessary code to enable
@@ -269,4 +265,4 @@ Invoke-Expression (& { (zoxide init powershell | Out-String) })
 
 
 ## Final Line to set prompt
-oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\tokyo.omp.json" | Invoke-Expression
+oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\velvet.omp.json" | Invoke-Expression
