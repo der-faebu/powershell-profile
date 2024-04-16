@@ -15,7 +15,7 @@
 function Update-PSProfileFromGitHub {
     $temp = [System.IO.Path]::GetTempPath()
     try {
-        if(-not (Test-Path $PROFILE)){
+        if (-not (Test-Path $PROFILE)) {
             New-Item $PROFILE -ItemType File
         }
         Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
@@ -50,7 +50,9 @@ function Update-PSProfileFromGitHub {
 }
 
 # Import Terminal Icons
-Import-Module -Name Terminal-Icons
+if ($PSVersionTable.PSEdition -eq "Core" ) {
+    Import-Module -Name Terminal-Icons
+}
 
 # Find out if the current user identity is elevated (has admin rights)
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -77,7 +79,15 @@ function HKLM: { Set-Location HKLM: }
 function HKCU: { Set-Location HKCU: }
 function Env: { Set-Location Env: }
 function home: { Set-Location $env:HOMEPATH }
+function ex ($argList){
+    if(-not $argList){
+        $argList = $pwd
+    }
+    & explorer.exe $args
+}
 
+function desk { Set-Location "$HOME\Desktop" }
+function dl { Set-Location "$HOME\Downloads" }
 # Creates drive shortcut for Work Folders, if current user account is using it
 if (Test-Path "$env:USERPROFILE\Work Folders") {
     New-PSDrive -Name Work -PSProvider FileSystem -Root "$env:USERPROFILE\Work Folders" -Description "Work Folders"
