@@ -16,9 +16,9 @@
 #check for updates
 try{
     Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
-    $url = "https://github.com/der-faebu/powershell-profile/raw/main/setup.ps1/main/Microsoft.PowerShell_profile.ps1"
-    $oldhash = Get-FileHash $PROFILE
-    Invoke-RestMethod $url -OutFile "$env:temp/Microsoft.PowerShell_profile.ps1"
+    $url = "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
+    Invoke-RestMethod $url -OutFile "$env:temp/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
+    $oldhash = Get-FileHash $PROFILE -ErrorAction SilentlyContinue # don't care if $PROFILE doesn't exist
     $newhash = Get-FileHash "$env:temp/Microsoft.PowerShell_profile.ps1"
     if ($newhash -ne $oldhash) {
         Get-Content "$env:temp/Microsoft.PowerShell_profile.ps1" | Set-Content $PROFILE
@@ -28,8 +28,9 @@ try{
 }
 catch {
     Write-Error "unable to check for `$profile updates"
+    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
 }
-Remove-Variable @("newhash", "oldhash", "url")
+Remove-Variable @("newhash", "oldhash", "url") -ErrorAction SilentlyContinue
 Remove-Item  "$env:temp/Microsoft.PowerShell_profile.ps1"
 
 # Import Terminal Icons

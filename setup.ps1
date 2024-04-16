@@ -46,7 +46,7 @@ catch {
 }
 
 # OMP Install
-choco install -y oh-my-posh
+choco install -y oh-my-posh zoxide
 
 # Font Install
 # Get all installed font families
