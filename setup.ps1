@@ -80,8 +80,8 @@ if ($fontFamilies -notcontains "CaskaydiaCove NF") {
 # Terminal Icons Install
 #
 Write-Host  "Installing Terminal-Icons module..." -ForegroundColor Cyan
-
-Install-Module -Name Terminal-Icons -Repository PSGallery -Force
-
+if ($PSVersionTable.PSEdition -eq "Core" ) { 
+    Install-Module -Name Terminal-Icons -Repository PSGallery -Force
+}
 Write-Host  "Importing `$Profile..." -ForegroundColor Cyan
 & $profile
