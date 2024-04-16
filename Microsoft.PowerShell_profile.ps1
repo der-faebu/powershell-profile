@@ -13,31 +13,18 @@
 ### This is the default policy on Windows Server 2012 R2 and above for server Windows. For 
 ### more information about execution policies, run Get-Help about_Execution_Policies.
 
-function Get-StringHash {
-    param (
-        $InputString
-    )
-
-    $stringAsStream = [System.IO.MemoryStream]::new()
-    $writer = [System.IO.StreamWriter]::new($stringAsStream)
-    $writer.write($InputString)
-    $writer.Flush()
-    $stringAsStream.Position = 0
-    return (Get-FileHash -InputStream $stringAsStream).Hash
-}
-
 function Update-PSProfileFromGitHub {
     $temp = [System.IO.Path]::GetTempPath()
     try {
         Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
         $url = "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
         Invoke-RestMethod $url -OutFile "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
-        $oldhash = Get-StringHash (Get-Content $PROFILE) -ErrorAction Stop
-        Write-Host "Old hash: $oldhash" -ForegroundColor Cyan
-        $newhash = Get-StringHash (Get-Content "$temp/Microsoft.PowerShell_profile.ps1") 
-        Write-Host "New hash: $newhash" -ForegroundColor Cyan
+        $oldhash = Get-FileHash $PROFILE -ErrorAction Stop
+        Write-Host "Old hash: $($oldhash.Hash)." -ForegroundColor Cyan
+        $newhash = Get-FileHash "$temp/Microsoft.PowerShell_profile.ps1"
+        Write-Host "New hash: $($newhash.Hash)" -ForegroundColor Cyan
         $retries = 0
-        if ($newhash -eq $oldhash) {
+        if ($newhash.Hash -eq $oldhash.Hash) {
             Write-Host "Profile is up to date" -ForegroundColor Green
         }
         else {
