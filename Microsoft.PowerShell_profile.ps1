@@ -22,7 +22,7 @@ try{
     $oldhash = Get-FileHash $PROFILE -ErrorAction SilentlyContinue # don't care if $PROFILE doesn't exist
     $newhash = Get-FileHash "$tempcls/Microsoft.PowerShell_profile.ps1"
     if ($newhash -ne $oldhash) {
-        Get-Content "$env:temp/Microsoft.PowerShell_profile.ps1" | Set-Content $PROFILE
+        Get-Content "$temp/Microsoft.PowerShell_profile.ps1" | Set-Content $PROFILE
         . $PROFILE
         return
     }
