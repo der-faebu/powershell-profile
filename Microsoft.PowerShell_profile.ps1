@@ -234,7 +234,7 @@ function grep($regex, $dir) {
     $input | select-string $regex
 }
 function touch($file) {
-    "" | Out-File $file -Encoding ASCII
+    "" | Out-File $file -Encoding utf8
 }
 function df {
     get-volume
@@ -269,4 +269,4 @@ Invoke-Expression (& { (zoxide init powershell | Out-String) })
 
 
 ## Final Line to set prompt
-oh-my-posh init pwsh --config https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/cobalt2.omp.json | Invoke-Expression
+oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\tokyo.omp.json" | Invoke-Expression
