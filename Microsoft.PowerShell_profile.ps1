@@ -129,10 +129,10 @@ function dirs {
 function admin {
     if ($args.Count -gt 0) {   
         $argList = "& '" + $args + "'"
-        Start-Process "wt new-tab --profile 'PowerShell (Admin)' -ArgumentList $argList"
+        Start-Process "pwsh.exe" -Verb RunAs -ArgumentList $argList
     }
     else {
-        Start-Process "wt new-tab --profile 'PowerShell (Admin)'"
+        Start-Process "pwsh.exe" -Verb RunAs
     }
 }
 

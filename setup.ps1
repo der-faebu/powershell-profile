@@ -72,8 +72,8 @@ if ($fontFamilies -notcontains "MesloLGM Nerd Font") {
     # }
 
     # Clean up
-    Remove-Item -Path ".\CascadiaCode" -Recurse -Force
-    Remove-Item -Path ".\CascadiaCode.zip" -Force
+  #  Remove-Item -Path ".\CascadiaCode" -Recurse -Force
+  #  Remove-Item -Path ".\CascadiaCode.zip" -Force
 }
 
 
