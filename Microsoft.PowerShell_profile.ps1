@@ -169,31 +169,31 @@ Function Test-CommandExists {
 #
 # If your favorite editor is not here, add an elseif and ensure that the directory it is installed in exists in your $env:Path
 #
-if (Test-CommandExists vim) {
-    $EDITOR = 'vim'
-}
-elseif (Test-CommandExists pvim) {
-    $EDITOR = 'pvim'
-}
-elseif (Test-CommandExists nvim) {
-    $EDITOR = 'nvim'
-}
-elseif (Test-CommandExists vi) {
-    $EDITOR = 'vi'
-}
-elseif (Test-CommandExists code) {
-    $EDITOR = 'code'
-}
-elseif (Test-CommandExists notepad) {
-    $EDITOR = 'notepad'
-}
-elseif (Test-CommandExists notepad++) {
-    $EDITOR = 'notepad++'
-}
-elseif (Test-CommandExists sublime_text) {
-    $EDITOR = 'sublime_text'
-}
-Set-Alias -Name vim -Value $EDITOR
+# if (Test-CommandExists vim) {
+#     $EDITOR = 'vim'
+# }
+# elseif (Test-CommandExists pvim) {
+#     $EDITOR = 'pvim'
+# }
+# elseif (Test-CommandExists nvim) {
+#     $EDITOR = 'nvim'
+# }
+# elseif (Test-CommandExists vi) {
+#     $EDITOR = 'vi'
+# }
+# elseif (Test-CommandExists code) {
+#     $EDITOR = 'code'
+# }
+# elseif (Test-CommandExists notepad) {
+#     $EDITOR = 'notepad'
+# }
+# elseif (Test-CommandExists notepad++) {
+#     $EDITOR = 'notepad++'
+# }
+# elseif (Test-CommandExists sublime_text) {
+#     $EDITOR = 'sublime_text'
+# }
+# Set-Alias -Name vim -Value $EDITOR
 
 function ll { Get-ChildItem -Path $pwd -File }
 function repos { Set-Location c:\repos }
