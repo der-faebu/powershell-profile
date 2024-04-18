@@ -166,6 +166,8 @@ Function Test-CommandExists {
 } 
 #
 # Aliases
+$vimExe =((Get-Childitem -Recurse -Path "C:\tools\vim\") | Where-Object Name -eq 'vim.exe').FullName 
+Set-Alias -Name vim -Value $vimExe.ToString()
 #
 # If your favorite editor is not here, add an elseif and ensure that the directory it is installed in exists in your $env:Path
 #
