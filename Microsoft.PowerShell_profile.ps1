@@ -51,7 +51,7 @@ function Update-PSProfileFromGitHub {
 
 # Import Terminal Icons
 if ($PSVersionTable.PSEdition -eq "Core" ) {
-    Import-Module -Name Terminal-Icons
+    Import-Module -Name Terminal-Icons -ErrorAction Stop
 }
 
 # Find out if the current user identity is elevated (has admin rights)
@@ -62,6 +62,7 @@ $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administ
 # If so and the current host is a command line, then change to red color 
 # as warning to user that they are operating in an elevated context
 # Useful shortcuts for traversing directories
+function wsl { wsl.exe ~}
 function cd... { Set-Location ..\.. }
 function cd.... { Set-Location ..\..\.. }
 
@@ -87,6 +88,7 @@ function ex ($argList){
 }
 
 function desk { Set-Location "$HOME\Desktop" }
+function desktop { Set-Location "$HOME\Desktop" }
 function home { Set-Location $HOME } 
 function tmp { Set-Location "c:\tmp"} 
 function dl { Set-Location "$HOME\Downloads" }
