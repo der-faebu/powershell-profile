@@ -48,6 +48,9 @@ catch {
 # OMP Install
 choco install -y oh-my-posh zoxide
 
+# Install github cli
+choco install -y gh
+
 # Font Install
 # Get all installed font families
 Write-Host  "Handling fonts..." -ForegroundColor Cyan

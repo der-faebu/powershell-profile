@@ -224,6 +224,9 @@ function uptime {
     }
 }
 
+function ghc {
+     gh copilot $args
+}
 function Import-PSProfile {
     & $profile
 }
