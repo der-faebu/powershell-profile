@@ -170,34 +170,6 @@ Function Test-CommandExists {
 # Aliases
 $vimExe =((Get-Childitem -Recurse -Path "C:\tools\vim\") | Where-Object Name -eq 'vim.exe').FullName 
 Set-Alias -Name vim -Value $vimExe.ToString()
-#
-# If your favorite editor is not here, add an elseif and ensure that the directory it is installed in exists in your $env:Path
-#
-# if (Test-CommandExists vim) {
-#     $EDITOR = 'vim'
-# }
-# elseif (Test-CommandExists pvim) {
-#     $EDITOR = 'pvim'
-# }
-# elseif (Test-CommandExists nvim) {
-#     $EDITOR = 'nvim'
-# }
-# elseif (Test-CommandExists vi) {
-#     $EDITOR = 'vi'
-# }
-# elseif (Test-CommandExists code) {
-#     $EDITOR = 'code'
-# }
-# elseif (Test-CommandExists notepad) {
-#     $EDITOR = 'notepad'
-# }
-# elseif (Test-CommandExists notepad++) {
-#     $EDITOR = 'notepad++'
-# }
-# elseif (Test-CommandExists sublime_text) {
-#     $EDITOR = 'sublime_text'
-# }
-# Set-Alias -Name vim -Value $EDITOR
 
 function ll { Get-ChildItem -Path $pwd -File }
 function repos { Set-Location c:\repos }
@@ -205,6 +177,7 @@ function gcom {
     git add .
     git commit -m "$args"
 }
+
 function lazyg {
     git add .
     git commit -m "$args"
@@ -230,26 +203,33 @@ function uptime {
     }
 }
 
+## Github Copilot
 function ghc {
      gh copilot $args
 }
+
 function Import-PSProfile {
     & $profile
 }
+
+Set-Alias -Name Reload-PSProfile -Value Import-PSProfile 
 function Find-File($name) {
     Get-ChildItem -recurse -filter "*${name}*" -ErrorAction SilentlyContinue | ForEach-Object {
         $place_path = $_.directory
         Write-Output "${place_path}\${_}"
     }
 }
+
 function unzip ($file) {
     Write-Output("Extracting", $file, "to", $pwd)
     $fullFile = Get-ChildItem -Path $pwd -Filter .\cove.zip | ForEach-Object { $_.FullName }
     Expand-Archive -Path $fullFile -DestinationPath $pwd
 }
+
 function ix ($file) {
     curl.exe -F "f:1=@$file" ix.io
 }
+
 function grep($regex, $dir) {
     if ( $dir ) {
         Get-ChildItem $dir | select-string $regex
@@ -257,24 +237,31 @@ function grep($regex, $dir) {
     }
     $input | select-string $regex
 }
+
 function touch($file) {
     "" | Out-File $file -Encoding utf8
 }
+
 function df {
     get-volume
 }
+
 function sed($file, $find, $replace) {
     (Get-Content $file).replace("$find", $replace) | Set-Content $file
 }
+
 function which($name) {
     Get-Command $name | Select-Object -ExpandProperty Definition
 }
+
 function export($name, $value) {
     set-item -force -path "env:$name" -value $value;
 }
+
 function pkill($name) {
     Get-Process $name -ErrorAction SilentlyContinue | Stop-Process
 }
+
 function pgrep($name) {
     GASCIIet-Process $name
 }
