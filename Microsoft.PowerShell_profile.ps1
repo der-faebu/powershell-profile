@@ -210,9 +210,15 @@ function lazyg {
     git commit -m "$args"
     git push
 }
+
+function netcpl {
+    control.exe /name Microsoft.NetworkAndSharingCenter
+}
+
 function Get-PublicIP {
     (Invoke-WebRequest http://ifconfig.me/ip ).Content
 }
+
 function uptime {
     #Windows Powershell only
     If ($PSVersionTable.PSVersion.Major -eq 5 ) {
