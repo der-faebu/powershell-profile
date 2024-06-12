@@ -192,6 +192,31 @@ function Get-PublicIP {
     (Invoke-WebRequest http://ifconfig.me/ip ).Content
 }
 
+function Connect-VPN {
+    $credential = Import-Clixml -Path $env:USERPROFILE\.vpncreds
+    $vpnConnection = Get-VpnConnection | Where-Object ServerAddress -eq 'sslvpn.root.ch'
+    if ($null -ne $vpnConnection) {
+        if ($vpnConnection.ConnectionStatus -eq 'Disconnected') {
+            Write-Information "Trying to connect VPN..."
+            & rasdial.exe $($vpnConnection.Name) $credential.UserName $credential.GetNetworkCredential().Password
+        }
+    }
+} 
+
+Set-Alias -Name vpnup -Value Connect-VPN
+
+function Disconnect-VPN {
+    & rasdial.exe /disconnect
+}
+
+Set-Alias -Name vpndown -Value Disconnect-VPN
+
+function Get-VPNStatus{
+    Write-Output (Get-VpnConnection | Where-Object ServerAddress -eq 'sslvpn.root.ch' | Select-Object -ExpandProperty ConnectionStatus)
+}
+
+Set-Alias -Name getvpn -Value Get-VPNStatus
+
 function uptime {
     #Windows Powershell only
     If ($PSVersionTable.PSVersion.Major -eq 5 ) {
