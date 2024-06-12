@@ -193,13 +193,24 @@ function Get-PublicIP {
 }
 
 function Connect-VPN {
-    $credential = Import-Clixml -Path $env:USERPROFILE\.vpncreds
-    $vpnConnection = Get-VpnConnection | Where-Object ServerAddress -eq 'sslvpn.root.ch'
-    if ($null -ne $vpnConnection) {
+    try{
+        $credential = Import-Clixml -Path $env:USERPROFILE\.vpncreds
+        $vpnConnection = Get-VpnConnection | Where-Object ServerAddress -eq 'sslvpn.root.ch'
+    
+        if ($null -eq $vpnConnection) {
+            Write-Error "Could not find VPN connection."
+            Exit 2
+        }
         if ($vpnConnection.ConnectionStatus -eq 'Disconnected') {
             Write-Information "Trying to connect VPN..."
             & rasdial.exe $($vpnConnection.Name) $credential.UserName $credential.GetNetworkCredential().Password
+            Exit 0
         }
+        Write-Host "VPN already connected." -ForegroundColor Yellow
+    }
+    catch{
+        Write-Error "Could not find '.vpncreds' in user profile. Exiting..."
+        exit 1
     }
 } 
 
