@@ -223,7 +223,7 @@ function Connect-VPN {
 
 function Reset-WindowsUpdateCache {
     if(-not $isAdmin){
-        Write-Error "This function must be run as an administrator."
+        Write-Host "This function must be run as an administrator." -ForegroundColor Red
     }
     Stop-Service -Name wuauserv, cryptSvc, bits, msiserver -Force
 
