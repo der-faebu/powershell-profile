@@ -189,30 +189,58 @@ function netcpl {
 }
 
 function Get-PublicIP {
-    (Invoke-WebRequest http://ifconfig.me/ip ).Content
+    (Invoke-WebRequest "http://ifconfig.me/ip" ).Content
 }
 
 function Connect-VPN {
     try{
         $credential = Import-Clixml -Path $env:USERPROFILE\.vpncreds
         $vpnConnection = Get-VpnConnection | Where-Object ServerAddress -eq 'sslvpn.root.ch'
-    
+        
         if ($null -eq $vpnConnection) {
             Write-Error "Could not find VPN connection."
             Exit 2
         }
+
         if ($vpnConnection.ConnectionStatus -eq 'Disconnected') {
             Write-Information "Trying to connect VPN..."
             & rasdial.exe $($vpnConnection.Name) $credential.UserName $credential.GetNetworkCredential().Password
             Exit 0
         }
-        Write-Host "VPN already connected." -ForegroundColor Yellow
+    
+    #    $routeIPConfiguration = Get-NetIPConfiguration | Where-Object {$_.IPv4Address.IPAddress -like "10.125.0.*"}
+    #    $homeNetworkAccessible = $null -ne $routeIPConfiguration
+
+    #    if($homeNetworkAccessible){
+    #        $cmd = "New-NetRoute -DestinationPrefix 10.125.0.0/24 -NextHop 10.125.0.129 -InterfaceIndex $($routeIPConfiguration.InterfaceIndex); Read-host"
+    #        $cmd | out-file $env:userprofile\.vpnroute
+    #        Start-Process "pwsh.exe" -Verb RunAs -WorkingDirectory $env:USERPROFILE -ArgumentList $env:USERPROFILE\.vpnroute -Wait
+    #    }
+    #    Write-Host "VPN already connected." -ForegroundColor Yellow
     }
     catch{
         Write-Error "Could not find '.vpncreds' in user profile. Exiting..."
         exit 1
     }
 } 
+
+function Reset-WindowsUpdateCache {
+    if(-not $isAdmin){
+        Write-Error "This function must be run as an administrator."
+        exit
+    }
+    Stop-Service -Name wuauserv, cryptSvc, bits, msiserver -Force
+
+    Rename-Item -Path 'C:\Windows\SoftwareDistribution' -NewName 'SoftwareDistribution.old' -Force
+    Rename-Item -Path 'C:\Windows\System32\catroot2' -NewName 'Catroot2.old' -Force
+
+    Start-Service -Name wuauserv, cryptSvc, bits, msiserver
+
+    Remove-Item -Path 'C:\Windows\SoftwareDistribution.old' -Recurse -Force
+    Remove-Item -Path 'C:\Windows\System32\catroot2.old' -Recurse -Force
+
+    Write-Output "Windows Update service has been reset and cache cleared."
+}
 
 Set-Alias -Name vpnup -Value Connect-VPN
 
