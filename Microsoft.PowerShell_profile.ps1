@@ -199,13 +199,11 @@ function Connect-VPN {
         
         if ($null -eq $vpnConnection) {
             Write-Error "Could not find VPN connection."
-            Exit 2
         }
 
         if ($vpnConnection.ConnectionStatus -eq 'Disconnected') {
             Write-Information "Trying to connect VPN..."
             & rasdial.exe $($vpnConnection.Name) $credential.UserName $credential.GetNetworkCredential().Password
-            Exit 0
         }
     
     #    $routeIPConfiguration = Get-NetIPConfiguration | Where-Object {$_.IPv4Address.IPAddress -like "10.125.0.*"}
@@ -220,14 +218,12 @@ function Connect-VPN {
     }
     catch{
         Write-Error "Could not find '.vpncreds' in user profile. Exiting..."
-        exit 1
     }
 } 
 
 function Reset-WindowsUpdateCache {
     if(-not $isAdmin){
         Write-Error "This function must be run as an administrator."
-        exit
     }
     Stop-Service -Name wuauserv, cryptSvc, bits, msiserver -Force
 
