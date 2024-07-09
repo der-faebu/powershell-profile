@@ -245,6 +245,20 @@ function Test-ADCredential {
         $UserName = $Credential.UserName
         $Password = $Credential.Password
     }
+
+    if ($UserName -match '([a-zA-Z0-9]+)@([a-zA-Z0-9]+)\.([a-zA-Z]+)') {
+        $UserName = $Matches[1]
+    }
+
+    if ($UserName -match '([a-zA-Z0-9]+)\\([a-zA-Z0-9]+)') {
+        $UserName = $matches[2]
+    }
+    Write-Host "Username: '$UserName'."
+
+    if ($PSCmdlet.ParameterSetName -eq 'Credential') {
+        $UserName = $Credential.UserName
+        $Password = $Credential.Password
+    }
     
     Add-Type -AssemblyName System.DirectoryServices.AccountManagement
     $DS = New-Object System.DirectoryServices.AccountManagement.PrincipalContext('domain')
@@ -254,29 +268,13 @@ function Test-ADCredential {
 
 function Connect-VPN {
     try {
-        $vpnCredsOK = $false
 
-        while (-not $vpnCredsOK) {
-            if (-not(Test-Path $env:USERPROFILE\.vpncreds)) {
-                Write-Warning "Could not find '.vpncreds' in user profile."
-                $creds = Get-Credential -Message "Please enter your VPN credentials" -UserName $env:USERNAME
-            }        
-            else {
-                Write-Information "Using cached VPN credentials."
-                $creds = Import-Clixml -Path $env:USERPROFILE\.vpncreds
-            }
-
-            if (Test-ADCredential -Credential $creds) {
-                # Saving the credentials in case they've changed.
-                $creds | Export-Clixml -Path $env:USERPROFILE\.vpncreds -Force
-                $vpnCredsOK = $true
-            }
-            else {
-                Write-Warning "Invalid credentials. Please try again."
-                Remove-Item -Path $env:USERPROFILE\.vpncreds -Force -ErrorAction SilentlyContinue
-            }
-        }
-        
+        if (-not(Test-Path $env:USERPROFILE\.vpncreds)) {
+            Write-Warning "Could not find '.vpncreds' in user profile."
+            $creds = Get-Credential -Message "Please enter your VPN credentials" -UserName $env:USERNAME
+            $creds | Export-Clixml -Path $env:USERPROFILE\.vpncreds
+        }        
+       $creds = Import-Clixml -Path $env:USERPROFILE\.vpncreds
         $vpnConnection = Get-VpnConnection | Where-Object ServerAddress -eq 'sslvpn.root.ch'
         
         if ($null -eq $vpnConnection) {
@@ -285,7 +283,7 @@ function Connect-VPN {
 
         if ($vpnConnection.ConnectionStatus -eq 'Disconnected') {
             Write-Information "Trying to connect VPN..."
-            & rasdial.exe $($vpnConnection.Name) $credential.UserName $credential.GetNetworkCredential().Password
+            & rasdial.exe $($vpnConnection.Name) $creds.UserName $creds.GetNetworkCredential().Password
         }
     
         #    $routeIPConfiguration = Get-NetIPConfiguration | Where-Object {$_.IPv4Address.IPAddress -like "10.125.0.*"}
@@ -299,7 +297,7 @@ function Connect-VPN {
         #    Write-Host "VPN already connected." -ForegroundColor Yellow
     }
     catch {
-        Write-Error "Could not find '.vpncreds' in user profile. Exiting..."
+        Write-Error $_.Exception.Message
     }
 } 
 
