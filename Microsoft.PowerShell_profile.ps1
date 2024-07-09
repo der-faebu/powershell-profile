@@ -12,7 +12,20 @@
 ###   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 ### This is the default policy on Windows Server 2012 R2 and above for server Windows. For 
 ### more information about execution policies, run Get-Help about_Execution_Policies.
+function Test-InternetConnection {
+    try {
+        $null = Test-Connection -ComputerName github.com -Count 1 -ErrorAction Stop
+        return $true
+    }
+    catch {
+        return $false
+    }
+}
 function Update-PSProfileFromGitHub {
+    if (-not (Test-InternetConnection)) {
+        Write-Warning "No internet connection available. Cannot update PS Profile..."
+        return
+    }
     $temp = [System.IO.Path]::GetTempPath()
     try {
         if (-not (Test-Path $PROFILE)) {
@@ -48,21 +61,27 @@ function Update-PSProfileFromGitHub {
     Remove-Variable @("newhash", "oldhash", "url") -ErrorAction SilentlyContinue
     Remove-Item  "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction SilentlyContinue
 }
-
+function Set-WindowsTerminalProfile {
+    $windowsProfileSettingsPath = "$($env:USERPROFILE)\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
+    if (-not (Test-Path $windowsProfileSettingsPath)) {
+       
+    }
+}
 # Import Terminal Icons
 if ($PSVersionTable.PSEdition -eq "Core" ) {
     Import-Module -Name Terminal-Icons -ErrorAction Stop
 }
 
-# Find out if the current user identity is elevated (has admin rights)
-$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-$principal = New-Object Security.Principal.WindowsPrincipal $identity
-$isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+function isAdmin {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal $identity
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) 
+}
 
 # If so and the current host is a command line, then change to red color 
 # as warning to user that they are operating in an elevated context
 # Useful shortcuts for traversing directories
-function wsl { wsl.exe ~}
+function wsl { wsl.exe ~ }
 function cd... { Set-Location ..\.. }
 function cd.... { Set-Location ..\..\.. }
 
@@ -80,8 +99,8 @@ function HKLM: { Set-Location HKLM: }
 function HKCU: { Set-Location HKCU: }
 function Env: { Set-Location Env: }
 function home: { Set-Location $env:HOMEPATH }
-function ex ($argList){
-    if(-not $argList){
+function ex ($argList) {
+    if (-not $argList) {
         $argList = $pwd
     }
     & explorer.exe $args
@@ -90,7 +109,7 @@ function ex ($argList){
 function desk { Set-Location "$HOME\Desktop" }
 function desktop { Set-Location "$HOME\Desktop" }
 function home { Set-Location $HOME } 
-function tmp { Set-Location "c:\tmp"} 
+function tmp { Set-Location "c:\tmp" } 
 function dl { Set-Location "$HOME\Downloads" }
 # Creates drive shortcut for Work Folders, if current user account is using it
 if (Test-Path "$env:USERPROFILE\Work Folders") {
@@ -102,7 +121,7 @@ if (Test-Path "$env:USERPROFILE\Work Folders") {
 # whether user is elevated (root) or not. Window title shows current version of PowerShell
 # and appends [ADMIN] if appropriate for easy taskbar identification
 function prompt { 
-    if ($isAdmin) {
+    if (isAdmin) {
         "[" + (Get-Location) + "] # " 
     }
     else {
@@ -111,7 +130,7 @@ function prompt {
 }
 
 $Host.UI.RawUI.WindowTitle = "PowerShell {0}" -f $PSVersionTable.PSVersion.ToString()
-if ($isAdmin) {
+if (isAdmin) {
     $Host.UI.RawUI.WindowTitle += " [ADMIN]"
 }
 
@@ -153,11 +172,6 @@ function Edit-Profile {
     }
 }
 
-# We don't need these any more; they were just temporary variables to get to $isAdmin. 
-# Delete them to prevent cluttering up the user profile. 
-Remove-Variable identity -ErrorAction SilentlyContinue
-Remove-Variable principal -ErrorAction SilentlyContinue
-
 Function Test-CommandExists {
     Param ($command)
     $oldPreference = $ErrorActionPreference
@@ -168,11 +182,31 @@ Function Test-CommandExists {
 } 
 #
 # Aliases
-$vimExe =((Get-Childitem -Recurse -Path "C:\tools\vim\") | Where-Object Name -eq 'vim.exe').FullName 
+$vimExe = ((Get-Childitem -Recurse -Path "C:\tools\vim\") | Where-Object Name -eq 'vim.exe').FullName 
 Set-Alias -Name vim -Value $vimExe.ToString()
 
 function ll { Get-ChildItem -Path $pwd -File }
 function repos { Set-Location c:\repos }
+
+# git functions
+
+function git-nuke {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$BranchName
+    )
+    $branch = git branch --list $BranchName
+    if ($null -ne $branch) {
+        Write-Warning "Branch '$BranchName' will be nuked locally and from origin. Are you sure? (y/n)"
+        $answer = Read-Host
+        if ($answer -eq 'y') {
+            git branch -D $BranchName
+            git push origin --delete $BranchName
+        }
+    }
+}
+
 function gcom {
     git add .
     git commit -m "$args"
@@ -191,10 +225,58 @@ function netcpl {
 function Get-PublicIP {
     (Invoke-WebRequest "http://ifconfig.me/ip" ).Content
 }
+function Test-ADCredential {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, ParameterSetName = 'Credential')]
+        [ValidateNotNull()]
+        [PSCredential]$Credential,
+
+        [Parameter(Mandatory = $true, ParameterSetName = 'UserPass')]
+        [ValidateNotNullOrEmpty()]
+        [string]$UserName,
+        
+        [Parameter(Mandatory = $true, ParameterSetName = 'UserPass')]
+        [ValidateNotNullOrEmpty()]
+        [securestring]$Password
+    )
+
+    if ($PSCmdlet.ParameterSetName -eq 'Credential') {
+        $UserName = $Credential.UserName
+        $Password = $Credential.Password
+    }
+    
+    Add-Type -AssemblyName System.DirectoryServices.AccountManagement
+    $DS = New-Object System.DirectoryServices.AccountManagement.PrincipalContext('domain')
+    $DS.ValidateCredentials($UserName, (ConvertFrom-SecureString -SecureString $Password -AsPlainText))
+
+}
 
 function Connect-VPN {
-    try{
-        $credential = Import-Clixml -Path $env:USERPROFILE\.vpncreds
+    try {
+        $vpnCredsOK = $false
+
+        while (-not $vpnCredsOK) {
+            if (-not(Test-Path $env:USERPROFILE\.vpncreds)) {
+                Write-Warning "Could not find '.vpncreds' in user profile."
+                $creds = Get-Credential -Message "Please enter your VPN credentials" -UserName $env:USERNAME
+            }        
+            else {
+                Write-Information "Using cached VPN credentials."
+                $creds = Import-Clixml -Path $env:USERPROFILE\.vpncreds
+            }
+
+            if (Test-ADCredential -Credential $creds) {
+                # Saving the credentials in case they've changed.
+                $creds | Export-Clixml -Path $env:USERPROFILE\.vpncreds -Force
+                $vpnCredsOK = $true
+            }
+            else {
+                Write-Warning "Invalid credentials. Please try again."
+                Remove-Item -Path $env:USERPROFILE\.vpncreds -Force -ErrorAction SilentlyContinue
+            }
+        }
+        
         $vpnConnection = Get-VpnConnection | Where-Object ServerAddress -eq 'sslvpn.root.ch'
         
         if ($null -eq $vpnConnection) {
@@ -206,24 +288,25 @@ function Connect-VPN {
             & rasdial.exe $($vpnConnection.Name) $credential.UserName $credential.GetNetworkCredential().Password
         }
     
-    #    $routeIPConfiguration = Get-NetIPConfiguration | Where-Object {$_.IPv4Address.IPAddress -like "10.125.0.*"}
-    #    $homeNetworkAccessible = $null -ne $routeIPConfiguration
+        #    $routeIPConfiguration = Get-NetIPConfiguration | Where-Object {$_.IPv4Address.IPAddress -like "10.125.0.*"}
+        #    $homeNetworkAccessible = $null -ne $routeIPConfiguration
 
-    #    if($homeNetworkAccessible){
-    #        $cmd = "New-NetRoute -DestinationPrefix 10.125.0.0/24 -NextHop 10.125.0.129 -InterfaceIndex $($routeIPConfiguration.InterfaceIndex); Read-host"
-    #        $cmd | out-file $env:userprofile\.vpnroute
-    #        Start-Process "pwsh.exe" -Verb RunAs -WorkingDirectory $env:USERPROFILE -ArgumentList $env:USERPROFILE\.vpnroute -Wait
-    #    }
-    #    Write-Host "VPN already connected." -ForegroundColor Yellow
+        #    if($homeNetworkAccessible){
+        #        $cmd = "New-NetRoute -DestinationPrefix 10.125.0.0/24 -NextHop 10.125.0.129 -InterfaceIndex $($routeIPConfiguration.InterfaceIndex); Read-host"
+        #        $cmd | out-file $env:userprofile\.vpnroute
+        #        Start-Process "pwsh.exe" -Verb RunAs -WorkingDirectory $env:USERPROFILE -ArgumentList $env:USERPROFILE\.vpnroute -Wait
+        #    }
+        #    Write-Host "VPN already connected." -ForegroundColor Yellow
     }
-    catch{
+    catch {
         Write-Error "Could not find '.vpncreds' in user profile. Exiting..."
     }
 } 
 
 function Reset-WindowsUpdateCache {
-    if(-not $isAdmin){
+    if (-not (isAdmin)) {
         Write-Host "This function must be run as an administrator." -ForegroundColor Red
+        return
     }
     Stop-Service -Name wuauserv, cryptSvc, bits, msiserver -Force
 
@@ -246,7 +329,7 @@ function Disconnect-VPN {
 
 Set-Alias -Name vpndown -Value Disconnect-VPN
 
-function Get-VPNStatus{
+function Get-VPNStatus {
     Write-Output (Get-VpnConnection | Where-Object ServerAddress -eq 'sslvpn.root.ch' | Select-Object -ExpandProperty ConnectionStatus)
 }
 
@@ -265,7 +348,7 @@ function uptime {
 
 ## Github Copilot
 function ghc {
-     gh copilot $args
+    gh copilot $args
 }
 
 function Import-PSProfile {
