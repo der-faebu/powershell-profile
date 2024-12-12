@@ -1,0 +1,3 @@
+[submodule "modules/Powershell-Module-Template"]
+	path = modules/Powershell-Module-Template
+	url = https://github.com/der-faebu/Powershell-Module-Template
