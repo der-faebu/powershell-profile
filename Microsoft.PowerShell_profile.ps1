@@ -460,7 +460,7 @@ function Reset-WindowsUpdateCache {
     Write-Output "Windows Update service has been reset and cache cleared."
 }
 
-Set-Alias -Name vpnup -Value Connect-VPN
+Set-Alias -Name vpnup -Value Connect-RootVPN
 
 function Disconnect-VPN {
     & rasdial.exe /disconnect
