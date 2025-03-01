@@ -71,6 +71,9 @@ function Update-FileFromRemoteURL {
             Write-Warning "No internet connection available. Cannot update PS Profile..."
             return
         }
+        Write-Debug "Remote path '$RemoteURL'"
+        Write-Debug "Local file: '$FilePath'"
+
         $temp = [System.IO.Path]::GetTempPath()
         $tempFolder = New-Item -Path $temp -Name 'UpdateCmdletFiles' -ItemType Directory -Force
     }
