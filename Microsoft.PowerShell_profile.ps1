@@ -13,7 +13,7 @@
 ### This is the default policy on Windows Server 2012 R2 and above for server Windows. For 
 ### more information about execution policies, run Get-Help about_Execution_Policies.
 
-$profilePath = "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
+$profilePath = "$HOME\Documents\PowerShell\Profile.ps1"
 
 function Test-InternetConnection {
     [CmdletBinding()]
