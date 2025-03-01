@@ -13,7 +13,7 @@
 ### This is the default policy on Windows Server 2012 R2 and above for server Windows. For 
 ### more information about execution policies, run Get-Help about_Execution_Policies.
 
-$profilePath = "$HOME\Documents\PowerShell\Profile.ps1"
+$PROFILE = "$HOME\Documents\PowerShell\Profile.ps1"
 
 function Test-InternetConnection {
     [CmdletBinding(
@@ -79,12 +79,12 @@ function Update-FileFromRemoteURL {
 
     Process {
         try {
-            if (-not (Test-Path $profilePath)) {
-                New-Item $profilePath -ItemType File
+            if (-not (Test-Path $PROFILE)) {
+                New-Item $PROFILE -ItemType File
             }
             Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
             Invoke-RestMethod $RemoteURL -OutFile "$tempFolder/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
-            $oldhash = Get-FileHash $profilePath -ErrorAction Stop
+            $oldhash = Get-FileHash $PROFILE -ErrorAction Stop
             Write-Host "Old hash: $($oldhash.Hash)." -ForegroundColor Cyan
             $newhash = Get-FileHash "$tempFolder/Microsoft.PowerShell_profile.ps1"
             Write-Host "New hash: $($newhash.Hash)" -ForegroundColor Cyan
@@ -95,8 +95,8 @@ function Update-FileFromRemoteURL {
             else {
                 Write-Host "Spotted some differences. Fetching newest version from GitHub..." -ForegroundColor Yellow
                 while ($retries -le 3) {
-                    Copy-Item "$tempFolder/Microsoft.PowerShell_profile.ps1" -Destination $profilePath -Force
-                    . $profilePath
+                    Copy-Item "$tempFolder/Microsoft.PowerShell_profile.ps1" -Destination $PROFILE -Force
+                    . $PROFILE
                     $retries++
                     Write-Host "Profile has been updated." -ForegroundColor Green
                     return
@@ -115,7 +115,7 @@ function Update-FileFromRemoteURL {
         Remove-Item  "$tempFolder" -Force -ErrorAction SilentlyContinue -Recurse
     }
 }
-Update-FileFromRemoteURL -RemoteURL "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1" -FilePath $profilePath 
+Update-FileFromRemoteURL -RemoteURL "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1" -FilePath $PROFILE 
 
 # Import Terminal Icons
 if ($PSVersionTable.PSEdition -eq "Core" ) {
