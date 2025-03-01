@@ -16,7 +16,9 @@
 $profilePath = "$HOME\Documents\PowerShell\Profile.ps1"
 
 function Test-InternetConnection {
-    [CmdletBinding()]
+    [CmdletBinding(
+        DefaultParameterSetName='ServerName'
+    )]
     param(
         [Parameter(Mandatory = $false, ParameterSetName = 'NoDNS')]
         [switch]$NoDNS,
@@ -115,13 +117,12 @@ function Update-FileFromRemoteURL {
 }
 Update-FileFromRemoteURL -RemoteURL "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1" -FilePath $profilePath 
 
-
 # Import Terminal Icons
 if ($PSVersionTable.PSEdition -eq "Core" ) {
     Import-Module -Name Terminal-Icons -ErrorAction Stop
 }
 
-function isAdmin {
+function IsAdmin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal $identity
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) 
@@ -187,18 +188,28 @@ function Unprotect-ChocoArguments {
         [string]$ChocoPackage
     )
 
-    if (-not $env:ChocolateyInstall){
+    if (-not $env:ChocolateyInstall) {
         Write-Error 'Chocolatey does not seem to be installed on this system.' -ErrorId 5
     }
+
+    $intrinsicPackageInfo = choco list -e -r $ChocoPackage
+    $cName = $intrinsicPackageInfo.split('|')[0]
+    $cVers = $intrinsicPackageInfo.Split('|')[1]
+
     if (-not (choco list -e -r $ChocoPackage)) {
         Write-Error "Package '$ChocoPackage' is not installed on the system." -ErrorId 1
     }
 
     $hiddenChocofolder = "$($env:ChocolateyInstall)\.chocolatey"
-    $packageFolder = Get-ChildItem -Path $hiddenChocofolder -Directory | Where-Object Name -like "$ChocoPackage*" 
+    $packageFolder = "$hiddenChocofolder\$cName.$cVers"
+    
+    # This should never happen but just in case...
+    if (@($packageFolder).Length -gt 1) {
+        Throw "Multiple packages were found. Please choose between these candiates: $($packageFolder | ForEach-Object {$_.Name -join ",`r`n"})"
+    }
     $argsFile = Get-ChildItem -Path $packageFolder -File | Where-Object Name -eq '.arguments'
     Write-Host $argsFile
-    if(-not (Test-Path $argsFile)){
+    if (-not (Test-Path $argsFile)) {
         Write-Error "No .arguments file found for package '$ChocoPackage'." -ErrorId 2
     }
 
@@ -309,7 +320,6 @@ function ll { Get-ChildItem -Path $pwd -File }
 function repos { Set-Location c:\repos }
 
 # git functions
-
 function git-nuke {
     param(
         [Parameter(Mandatory = $true)]
@@ -383,43 +393,54 @@ function Test-ADCredential {
     Add-Type -AssemblyName System.DirectoryServices.AccountManagement
     $DS = New-Object System.DirectoryServices.AccountManagement.PrincipalContext('domain')
     $DS.ValidateCredentials($UserName, (ConvertFrom-SecureString -SecureString $Password -AsPlainText))
-
 }
 
-function Connect-VPN {
+function Connect-RootVPN {
+    $vpnCredName = 'rootVPNCreds'
+
+    if (-not (Get-Module -FullyQualifiedName CredentialManager -ListAvailable )) {
+        try {
+            Install-Module CredentialManager -Scope CurrentUser -Force -ErrorAction Stop
+        }
+        catch {
+            Write-Error "Error installing or CredentialManager module. Please install it manually."
+        }
+    }
+
     try {
-
-        if (-not(Test-Path $env:USERPROFILE\.vpncreds)) {
-            Write-Warning "Could not find '.vpncreds' in user profile."
-            $creds = Get-Credential -Message "Please enter your VPN credentials" -UserName $env:USERNAME
-            $creds | Export-Clixml -Path $env:USERPROFILE\.vpncreds
-        }        
-        $creds = Import-Clixml -Path $env:USERPROFILE\.vpncreds
-        $vpnConnection = Get-VpnConnection | Where-Object ServerAddress -eq 'sslvpn.root.ch'
-        
-        if ($null -eq $vpnConnection) {
-            Write-Error "Could not find VPN connection."
-        }
-
-        if ($vpnConnection.ConnectionStatus -eq 'Disconnected') {
-            Write-Information "Trying to connect VPN..."
-            & rasdial.exe $($vpnConnection.Name) $creds.UserName $creds.GetNetworkCredential().Password
-        }
-    
-        #    $routeIPConfiguration = Get-NetIPConfiguration | Where-Object {$_.IPv4Address.IPAddress -like "10.125.0.*"}
-        #    $homeNetworkAccessible = $null -ne $routeIPConfiguration
-
-        #    if($homeNetworkAccessible){
-        #        $cmd = "New-NetRoute -DestinationPrefix 10.125.0.0/24 -NextHop 10.125.0.129 -InterfaceIndex $($routeIPConfiguration.InterfaceIndex); Read-host"
-        #        $cmd | out-file $env:userprofile\.vpnroute
-        #        Start-Process "pwsh.exe" -Verb RunAs -WorkingDirectory $env:USERPROFILE -ArgumentList $env:USERPROFILE\.vpnroute -Wait
-        #    }
-        #    Write-Host "VPN already connected." -ForegroundColor Yellow
+        Import-Module CredentialManager -ErrorAction stop
     }
+
     catch {
-        Write-Error $_.Exception.Message
+        Throw "Error importing 'CredentialManager' module: '$($_.Exception.Message)'."
     }
-} 
+
+    $vpnCred = Get-StoredCredential -Target $vpnCredName
+
+    if ($null -eq $vpnCred) {
+        Write-Warning "Could not find a vpn crential in Windows Credential Manager."
+        $creds = Get-Credential -Message "Please enter your VPN credentials" -UserName $env:USERNAME
+        try {
+            & cmdkey.exe /generic:VPNCreds /user:$($creds.UserName) /pass:$($creds.GetNetworkCredential().Password)
+        }
+        catch {
+            Write-Error "Could not save credential to Windows Credential store."
+        }
+    }
+
+    $vpnConnection = Get-VpnConnection | Where-Object ServerAddress -eq 'sslvpn.root.ch'
+        
+    if ($null -eq $vpnConnection) {
+        Write-Error "Could not find VPN connection."
+    }
+
+    if ($vpnConnection.ConnectionStatus -eq 'Disconnected') {
+        Write-Information "Trying to connect VPN..."
+        & rasdial.exe $($vpnConnection.Name) $vpnCred.UserName $($vpnCred.GetNetworkCredential().Password)
+    }
+    
+    Write-Host "VPN already connected." -ForegroundColor Yellow
+}
 
 function Reset-WindowsUpdateCache {
     if (-not (isAdmin)) {
@@ -538,7 +559,6 @@ if (Test-Path($ChocolateyProfile)) {
 }
 
 Invoke-Expression (& { (zoxide init powershell | Out-String) })
-
 
 ## Final Line to set prompt
 oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\tokyo.omp.json" | Invoke-Expression
