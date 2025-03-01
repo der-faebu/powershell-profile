@@ -13,60 +13,148 @@
 ### This is the default policy on Windows Server 2012 R2 and above for server Windows. For 
 ### more information about execution policies, run Get-Help about_Execution_Policies.
 function Test-InternetConnection {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false, ParameterSetName = 'NoDNS')]
+        [switch]$NoDNS,
+        [Parameter(Mandatory = $false, ParameterSetName = 'ServerName')]
+        [string]$ServerName = "raw.githubusercontent.com"
+    )
+
+    Write-Debug "Parameter set name: $($PSCmdlet.ParameterSetName)"
+
+    if (-not $NoDNS) {
+        try {
+            Write-Verbose "Trying to resolve DNS name '$ServerName'..."
+            Resolve-DnsName -Name $ServerName -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Write-Error "Could not resolve DNS name '$ServerName'."
+            return $false
+        }
+    }
+    else {
+        Write-Verbose "Skipping DNS resolution."
+        Write-Verbose "Setting ServerName to 1.1.1.1 ."
+        $ServerName = "1.1.1.1"
+    }
+
     try {
-        $null = Test-Connection -ComputerName github.com -Count 1 -ErrorAction Stop
+        Write-Verbose "Testing connection to '$ServerName' on port 443..."
+        Test-Connection -ComputerName $ServerName -TcpPort 443 -Count 1 -ErrorAction Stop | Out-Null
         return $true
     }
     catch {
+        Write-Debug "$($_.Exception.Message)"
         return $false
     }
 }
-function Update-PSProfileFromGitHub {
-    if (-not (Test-InternetConnection)) {
-        Write-Warning "No internet connection available. Cannot update PS Profile..."
-        return
+
+function Update-FileFromRemoteURL {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [ValidateNotNullOrWhiteSpace()]
+        [string]$RemoteURL,
+
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [ValidateNotNullOrWhiteSpace()]
+        [string]$FilePath
+    )
+
+    Begin {
+        if (-not (Test-InternetConnection)) {
+            Write-Warning "No internet connection available. Cannot update PS Profile..."
+            return
+        }
+        $temp = [System.IO.Path]::GetTempPath()
+        $tempFolder = New-Item -Path $temp -Name 'UpdateCmdletFiles' -ItemType Directory -Force
     }
-    $temp = [System.IO.Path]::GetTempPath()
-    try {
-        if (-not (Test-Path $PROFILE)) {
-            New-Item $PROFILE -ItemType File
-        }
-        Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
-        $url = "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
-        Invoke-RestMethod $url -OutFile "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
-        $oldhash = Get-FileHash $PROFILE -ErrorAction Stop
-        Write-Host "Old hash: $($oldhash.Hash)." -ForegroundColor Cyan
-        $newhash = Get-FileHash "$temp/Microsoft.PowerShell_profile.ps1"
-        Write-Host "New hash: $($newhash.Hash)" -ForegroundColor Cyan
-        $retries = 0
-        if ($newhash.Hash -eq $oldhash.Hash) {
-            Write-Host "Profile is up to date" -ForegroundColor Green
-        }
-        else {
-            Write-Host "Spotted some differences. Fetching newest version from GitHub..." -ForegroundColor Yellow
-            while ($retries -le 3) {
-                Copy-Item "$temp/Microsoft.PowerShell_profile.ps1" -Destination $PROFILE -Force
-                . $PROFILE
-                $retries++
-                Write-Host "Profile has been updated." -ForegroundColor Green
-                return
+
+    Process {
+        try {
+            if (-not (Test-Path $PROFILE)) {
+                New-Item $PROFILE -ItemType File
             }
-            Write-Error "Could not update Profile after 3 retries."
+            Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
+            Invoke-RestMethod $RemoteURL -OutFile "$tempFolder/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
+            $oldhash = Get-FileHash $PROFILE -ErrorAction Stop
+            Write-Host "Old hash: $($oldhash.Hash)." -ForegroundColor Cyan
+            $newhash = Get-FileHash "$tempFolder/Microsoft.PowerShell_profile.ps1"
+            Write-Host "New hash: $($newhash.Hash)" -ForegroundColor Cyan
+            $retries = 0
+            if ($newhash.Hash -eq $oldhash.Hash) {
+                Write-Host "Profile is up to date" -ForegroundColor Green
+            }
+            else {
+                Write-Host "Spotted some differences. Fetching newest version from GitHub..." -ForegroundColor Yellow
+                while ($retries -le 3) {
+                    Copy-Item "$temp/Microsoft.PowerShell_profile.ps1" -Destination $PROFILE -Force
+                    . $PROFILE
+                    $retries++
+                    Write-Host "Profile has been updated." -ForegroundColor Green
+                    return
+                }
+                Write-Error "Could not update Profile after 3 retries."
+            }
+        }
+        catch {
+            Write-Error "unable to check for `$profile updates"
+            Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
         }
     }
-    catch {
-        Write-Error "unable to check for `$profile updates"
-        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
-    }
-    Remove-Variable @("newhash", "oldhash", "url") -ErrorAction SilentlyContinue
-    Remove-Item  "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction SilentlyContinue
-}
-function Set-WindowsTerminalProfile {
-    $windowsProfileSettingsPath = "$($env:USERPROFILE)\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
-    if (-not (Test-Path $windowsProfileSettingsPath)) {
-       
+
+    End {
+        Remove-Variable @("newhash", "oldhash", "url") -ErrorAction SilentlyContinue
+        Remove-Item  "$tempFolder" -Force -ErrorAction SilentlyContinue
     }
 }
+Update-FileFromRemoteURL -RemoteURL "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1" -FilePath $PROFILE
+# function Update-PSProfileFromGitHub {
+#     if (-not (Test-InternetConnection)) {
+#         Write-Warning "No internet connection available. Cannot update PS Profile..."
+#         return
+#     }
+#     $temp = [System.IO.Path]::GetTempPath()
+#     try {
+#         if (-not (Test-Path $PROFILE)) {
+#             New-Item $PROFILE -ItemType File
+#         }
+#         Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
+#         $url = "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
+#         Invoke-RestMethod $url -OutFile "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
+#         $oldhash = Get-FileHash $PROFILE -ErrorAction Stop
+#         Write-Host "Old hash: $($oldhash.Hash)." -ForegroundColor Cyan
+#         $newhash = Get-FileHash "$temp/Microsoft.PowerShell_profile.ps1"
+#         Write-Host "New hash: $($newhash.Hash)" -ForegroundColor Cyan
+#         $retries = 0
+#         if ($newhash.Hash -eq $oldhash.Hash) {
+#             Write-Host "Profile is up to date" -ForegroundColor Green
+#         }
+#         else {
+#             Write-Host "Spotted some differences. Fetching newest version from GitHub..." -ForegroundColor Yellow
+#             while ($retries -le 3) {
+#                 Copy-Item "$temp/Microsoft.PowerShell_profile.ps1" -Destination $PROFILE -Force
+#                 . $PROFILE
+#                 $retries++
+#                 Write-Host "Profile has been updated." -ForegroundColor Green
+#                 return
+#             }
+#             Write-Error "Could not update Profile after 3 retries."
+#         }
+#     }
+#     catch {
+#         Write-Error "unable to check for `$profile updates"
+#         Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+#     }
+#     Remove-Variable @("newhash", "oldhash", "url") -ErrorAction SilentlyContinue
+#     Remove-Item  "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction SilentlyContinue
+# }
+
+Update-PSWindowsTerminalProfileFromGithub {
+
+}
+
 # Import Terminal Icons
 if ($PSVersionTable.PSEdition -eq "Core" ) {
     Import-Module -Name Terminal-Icons -ErrorAction Stop
@@ -89,6 +177,80 @@ function cd.... { Set-Location ..\..\.. }
 function md5 { Get-FileHash -Algorithm MD5 $args }
 function sha1 { Get-FileHash -Algorithm SHA1 $args }
 function sha256 { Get-FileHash -Algorithm SHA256 $args }
+
+function ConvertFrom-Base64 {
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [string]
+        $Base64Value
+    )
+    process {
+        $stringValue = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($Base64Value)))
+        Write-Output $stringValue
+    }
+}
+
+function ConvertTo-Base64 {
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [string]
+        $StringValue
+    )
+    process {
+        $base64Value = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($StringValue))
+        Write-Output $base64Value
+    }
+}
+
+# Function for showing used arguments during Chocolatey install
+function Unprotect-ChocoArguments {
+    <#
+    .SYNOPSIS 
+    Uncovers the arguments used during installation of a chocolatey package.
+    
+    .OUTPUTS 
+    System.String
+    
+    .PARAMETER ChocoPackage 
+    The name of the Chocolatey package.
+
+    .NOTES
+    Error codes:
+    5: Chocolatey not installed
+    1: Choco package not found
+    2: .Arguments file not found
+    #>
+
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ChocoPackage
+    )
+
+    if (-not $env:ChocolateyInstall){
+        Write-Error 'Chocolatey does not seem to be installed on this system.' -ErrorId 5
+        Exit 5
+    }
+    if (-not (choco list -e -r $ChocoPackage)) {
+        Write-Error "Package '$ChocoPackage' is not installed on the system." -ErrorId 1
+        Exit 1
+    }
+
+    $hiddenChocofolder = "$($env:ChocolateyInstall)\.chocolatey"
+    $packageFolder = Get-ChildItem -Path $hiddenChocofolder -Directory | Where-Object Name -like "$ChocoPackage*" 
+    $argsFile = Get-ChildItem -Path $packageFolder -File | Where-Object Name -eq '.arguments'
+    Write-Host $argsFile
+    if(-not (Test-Path $argsFile)){
+        Write-Error "No .arguments file found for package '$ChocoPackage'." -ErrorId 2
+        Exit 2
+    }
+
+    $entropyBytes = [System.Text.Encoding]::UTF8.GetBytes("Chocolatey")
+    $encryptedBytes = [System.Convert]::FromBase64String([System.IO.File]::ReadAllText($argsFile.FullName))
+    $decryptedBytes = [System.Security.Cryptography.ProtectedData]::Unprotect($encryptedBytes, $entropyBytes, [System.Security.Cryptography.DataProtectionScope]::LocalMachine)
+
+    $decryptedArgs = [System.Text.Encoding]::UTF8.GetString($decryptedBytes)
+    Write-Output $decryptedArgs
+}
 
 # Quick shortcut to start notepad
 function n++ { notepad++ $args }
@@ -274,7 +436,7 @@ function Connect-VPN {
             $creds = Get-Credential -Message "Please enter your VPN credentials" -UserName $env:USERNAME
             $creds | Export-Clixml -Path $env:USERPROFILE\.vpncreds
         }        
-       $creds = Import-Clixml -Path $env:USERPROFILE\.vpncreds
+        $creds = Import-Clixml -Path $env:USERPROFILE\.vpncreds
         $vpnConnection = Get-VpnConnection | Where-Object ServerAddress -eq 'sslvpn.root.ch'
         
         if ($null -eq $vpnConnection) {
