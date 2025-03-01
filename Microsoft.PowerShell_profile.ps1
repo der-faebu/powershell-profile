@@ -189,11 +189,9 @@ function Unprotect-ChocoArguments {
 
     if (-not $env:ChocolateyInstall){
         Write-Error 'Chocolatey does not seem to be installed on this system.' -ErrorId 5
-        Exit 5
     }
     if (-not (choco list -e -r $ChocoPackage)) {
         Write-Error "Package '$ChocoPackage' is not installed on the system." -ErrorId 1
-        Exit 1
     }
 
     $hiddenChocofolder = "$($env:ChocolateyInstall)\.chocolatey"
@@ -202,7 +200,6 @@ function Unprotect-ChocoArguments {
     Write-Host $argsFile
     if(-not (Test-Path $argsFile)){
         Write-Error "No .arguments file found for package '$ChocoPackage'." -ErrorId 2
-        Exit 2
     }
 
     $entropyBytes = [System.Text.Encoding]::UTF8.GetBytes("Chocolatey")
