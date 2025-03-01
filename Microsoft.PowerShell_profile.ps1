@@ -422,7 +422,7 @@ function Connect-RootVPN {
         Write-Warning "Could not find a vpn crential in Windows Credential Manager."
         $creds = Get-Credential -Message "Please enter your VPN credentials" -UserName $env:USERNAME
         try {
-            & cmdkey.exe /generic:VPNCreds /user:$($creds.UserName) /pass:$($creds.GetNetworkCredential().Password)
+            & cmdkey.exe /generic:$($vpnCredName) /user:$($creds.UserName) /pass:$($creds.GetNetworkCredential().Password)
         }
         catch {
             Write-Error "Could not save credential to Windows Credential store."
