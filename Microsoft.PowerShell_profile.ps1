@@ -12,11 +12,15 @@
 ###   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 ### This is the default policy on Windows Server 2012 R2 and above for server Windows. For 
 ### more information about execution policies, run Get-Help about_Execution_Policies.
+
+$profilePath = "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
+
 function Test-InternetConnection {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false, ParameterSetName = 'NoDNS')]
         [switch]$NoDNS,
+
         [Parameter(Mandatory = $false, ParameterSetName = 'ServerName')]
         [string]$ServerName = "raw.githubusercontent.com"
     )
@@ -63,7 +67,7 @@ function Update-FileFromRemoteURL {
     )
 
     Begin {
-        if (-not (Test-InternetConnection)) {
+        if (-not (Test-InternetConnection -ServerName 'github.com')) {
             Write-Warning "No internet connection available. Cannot update PS Profile..."
             return
         }
@@ -73,12 +77,12 @@ function Update-FileFromRemoteURL {
 
     Process {
         try {
-            if (-not (Test-Path $PROFILE)) {
-                New-Item $PROFILE -ItemType File
+            if (-not (Test-Path $profilePath)) {
+                New-Item $profilePath -ItemType File
             }
             Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
             Invoke-RestMethod $RemoteURL -OutFile "$tempFolder/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
-            $oldhash = Get-FileHash $PROFILE -ErrorAction Stop
+            $oldhash = Get-FileHash $profilePath -ErrorAction Stop
             Write-Host "Old hash: $($oldhash.Hash)." -ForegroundColor Cyan
             $newhash = Get-FileHash "$tempFolder/Microsoft.PowerShell_profile.ps1"
             Write-Host "New hash: $($newhash.Hash)" -ForegroundColor Cyan
@@ -89,8 +93,8 @@ function Update-FileFromRemoteURL {
             else {
                 Write-Host "Spotted some differences. Fetching newest version from GitHub..." -ForegroundColor Yellow
                 while ($retries -le 3) {
-                    Copy-Item "$temp/Microsoft.PowerShell_profile.ps1" -Destination $PROFILE -Force
-                    . $PROFILE
+                    Copy-Item "$tempFolder/Microsoft.PowerShell_profile.ps1" -Destination $profilePath -Force
+                    . $profilePath
                     $retries++
                     Write-Host "Profile has been updated." -ForegroundColor Green
                     return
@@ -106,54 +110,11 @@ function Update-FileFromRemoteURL {
 
     End {
         Remove-Variable @("newhash", "oldhash", "url") -ErrorAction SilentlyContinue
-        Remove-Item  "$tempFolder" -Force -ErrorAction SilentlyContinue
+        Remove-Item  "$tempFolder" -Force -ErrorAction SilentlyContinue -Recurse
     }
 }
-Update-FileFromRemoteURL -RemoteURL "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1" -FilePath $PROFILE
-# function Update-PSProfileFromGitHub {
-#     if (-not (Test-InternetConnection)) {
-#         Write-Warning "No internet connection available. Cannot update PS Profile..."
-#         return
-#     }
-#     $temp = [System.IO.Path]::GetTempPath()
-#     try {
-#         if (-not (Test-Path $PROFILE)) {
-#             New-Item $PROFILE -ItemType File
-#         }
-#         Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
-#         $url = "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
-#         Invoke-RestMethod $url -OutFile "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
-#         $oldhash = Get-FileHash $PROFILE -ErrorAction Stop
-#         Write-Host "Old hash: $($oldhash.Hash)." -ForegroundColor Cyan
-#         $newhash = Get-FileHash "$temp/Microsoft.PowerShell_profile.ps1"
-#         Write-Host "New hash: $($newhash.Hash)" -ForegroundColor Cyan
-#         $retries = 0
-#         if ($newhash.Hash -eq $oldhash.Hash) {
-#             Write-Host "Profile is up to date" -ForegroundColor Green
-#         }
-#         else {
-#             Write-Host "Spotted some differences. Fetching newest version from GitHub..." -ForegroundColor Yellow
-#             while ($retries -le 3) {
-#                 Copy-Item "$temp/Microsoft.PowerShell_profile.ps1" -Destination $PROFILE -Force
-#                 . $PROFILE
-#                 $retries++
-#                 Write-Host "Profile has been updated." -ForegroundColor Green
-#                 return
-#             }
-#             Write-Error "Could not update Profile after 3 retries."
-#         }
-#     }
-#     catch {
-#         Write-Error "unable to check for `$profile updates"
-#         Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
-#     }
-#     Remove-Variable @("newhash", "oldhash", "url") -ErrorAction SilentlyContinue
-#     Remove-Item  "$temp/Microsoft.PowerShell_profile.ps1" -ErrorAction SilentlyContinue
-# }
+Update-FileFromRemoteURL -RemoteURL "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1" -FilePath $profilePath 
 
-Update-PSWindowsTerminalProfileFromGithub {
-
-}
 
 # Import Terminal Icons
 if ($PSVersionTable.PSEdition -eq "Core" ) {
