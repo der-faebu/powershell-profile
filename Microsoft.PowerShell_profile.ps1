@@ -15,7 +15,7 @@
 
 function Test-InternetConnection {
     [CmdletBinding(
-        DefaultParameterSetName='ServerName'
+        DefaultParameterSetName = 'ServerName'
     )]
     param(
         [Parameter(Mandatory = $false, ParameterSetName = 'NoDNS')]
@@ -54,69 +54,74 @@ function Test-InternetConnection {
     }
 }
 
-function Update-FileFromRemoteURL {
-    [CmdletBinding()]
+function Update-RemoteFile {
+    [CmdletBinding(DefaultParameterSetName = "Url")]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory, ParameterSetName = "Url", Position = 0)]
         [ValidateNotNullOrWhiteSpace()]
-        [string]$RemoteURL,
+        [string]$RemoteUrl,
 
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory, ParameterSetName = "File", Position = 0)]
         [ValidateNotNullOrWhiteSpace()]
-        [string]$FilePath
+        [string]$RemoteFile,
+
+        [Parameter(Mandatory, Position = 1)]
+        [ValidateNotNullOrWhiteSpace()]
+        [string]$LocalFile
     )
 
     Begin {
-        if (-not (Test-InternetConnection -ServerName 'github.com')) {
-            Write-Warning "No internet connection available. Cannot update PS Profile..."
-            return
+        if (-not (Test-Path $LocalFile)) {
+            Write-Host "Local file does not exist. Creating: $LocalFile"
+            New-Item -Path $LocalFile -ItemType File -Force | Out-Null
         }
-        Write-Debug "Remote path '$RemoteURL'"
-        Write-Debug "Local file: '$FilePath'"
 
-        $temp = [System.IO.Path]::GetTempPath()
-        $tempFolder = New-Item -Path $temp -Name 'UpdateCmdletFiles' -ItemType Directory -Force
+        $tempFile = New-TemporaryFile
     }
 
     Process {
         try {
-            if (-not (Test-Path $PROFILE)) {
-                New-Item $PROFILE -ItemType File
+            if ($PSCmdlet.ParameterSetName -eq "Url") {
+                Invoke-WebRequest -Uri $RemoteUrl -OutFile $tempFile.FullName -ErrorAction Stop
             }
-            Write-Host  "Checking for profile updates on GitHub.." -ForegroundColor Cyan
-            Invoke-RestMethod $RemoteURL -OutFile "$tempFolder/Microsoft.PowerShell_profile.ps1" -ErrorAction Stop
-            $oldhash = Get-FileHash $PROFILE -ErrorAction Stop
-            Write-Host "Old hash: $($oldhash.Hash)." -ForegroundColor Cyan
-            $newhash = Get-FileHash "$tempFolder/Microsoft.PowerShell_profile.ps1"
-            Write-Host "New hash: $($newhash.Hash)" -ForegroundColor Cyan
-            $retries = 0
-            if ($newhash.Hash -eq $oldhash.Hash) {
-                Write-Host "Profile is up to date" -ForegroundColor Green
-            }
-            else {
-                Write-Host "Spotted some differences. Fetching newest version from GitHub..." -ForegroundColor Yellow
-                while ($retries -le 3) {
-                    Copy-Item "$tempFolder/Microsoft.PowerShell_profile.ps1" -Destination $PROFILE -Force
-                    . $PROFILE
-                    $retries++
-                    Write-Host "Profile has been updated." -ForegroundColor Green
+            elseif ($PSCmdlet.ParameterSetName -eq "File") {
+                if (-not (Test-Path $RemoteFile)) {
+                    Write-Error "Remote file does not exist: $RemoteFile"
                     return
                 }
-                Write-Error "Could not update Profile after 3 retries."
+                Copy-Item -Path $RemoteFile -Destination $tempFile.FullName -Force
             }
+
+            $localHash = (Get-FileHash -Path $LocalFile -Algorithm SHA256).Hash
+            $remoteHash = (Get-FileHash -Path $tempFile.FullName -Algorithm SHA256).Hash
+
+            if ($localHash -eq $remoteHash) {
+                Write-Output "No changes detected. File is up to date."
+                return
+            }
+
+            $backupFile = "$LocalFile.backup"
+            Copy-Item -Path $LocalFile -Destination $backupFile -Force
+            Write-Output "Backup created: $backupFile"
+
+            Move-Item -Path $tempFile.FullName -Destination $LocalFile -Force
+            Write-Output "File updated: $LocalFile"
         }
         catch {
-            Write-Error "unable to check for `$profile updates"
+            Write-Error "Failed to update '$LocalFile'"
             Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
         }
     }
 
     End {
-        Remove-Variable @("newhash", "oldhash", "url") -ErrorAction SilentlyContinue
-        Remove-Item  "$tempFolder" -Force -ErrorAction SilentlyContinue -Recurse
+        if (Test-Path $tempFile.FullName) {
+            Remove-Item -Path $tempFile.FullName -Force -ErrorAction SilentlyContinue
+        }
     }
 }
-Update-FileFromRemoteURL -RemoteURL "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1" -FilePath $PROFILE 
+
+
+Update-RemoteFile -RemoteURL "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1" -LocalFile $PROFILE 
 
 # Import Terminal Icons
 if ($PSVersionTable.PSEdition -eq "Core" ) {
@@ -493,6 +498,21 @@ function ghc {
 
 function Import-PSProfile {
     & $profile
+}
+
+function Import-TerminalConfig {
+    $terminalSettingsPath = @{
+        Unpackaged = "$($env:LOCALAPPDATA)\Microsoft\Windows Terminal\settings.json"
+        Stable     = "$($env:LOCALAPPDATA)\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
+        Preview    = "$($env:LOCALAPPDATA)\Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState\settings.json"
+    }
+    
+    foreach ($path in $terminalSettingsPath.GetEnumerator().Name) {
+        if (Test-Path $terminalSettingsPath[$path]) {
+            Copy-Item -Path $path -Destination "$path_.bak"
+            Update-RemoteFile -RemoteURL "https://raw.githubusercontent.com/der-faebu/powershell-profile/refs/heads/main/terminal.settings.json" -LocalFile $path
+        }
+    }
 }
 
 Set-Alias -Name Reload-PSProfile -Value Import-PSProfile 
