@@ -53,7 +53,6 @@ function Test-InternetConnection {
         return $false
     }
 }
-
 function Update-RemoteFile {
     [CmdletBinding(DefaultParameterSetName = "Url")]
     param (
@@ -119,7 +118,6 @@ function Update-RemoteFile {
         }
     }
 }
-
 
 Update-RemoteFile -RemoteURL "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1" -LocalFile $PROFILE 
 
@@ -242,7 +240,6 @@ function ex ($argList) {
     }
     & explorer.exe $args
 }
-
 function desk { Set-Location "$HOME\Desktop" }
 function desktop { Set-Location "$HOME\Desktop" }
 function home { Set-Location $HOME } 
@@ -500,7 +497,7 @@ function Import-PSProfile {
     & $profile
 }
 
-function Import-TerminalConfig {
+function Update-TerminalConfig {
     $terminalSettingsPath = @{
         Unpackaged = "$($env:LOCALAPPDATA)\Microsoft\Windows Terminal\settings.json"
         Stable     = "$($env:LOCALAPPDATA)\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
