@@ -119,7 +119,7 @@ function Update-RemoteFile {
     }
 }
 
-Update-RemoteFile -RemoteURL "https://raw.githubusercontent.com/der-faebu/powershell-profile/main/Microsoft.PowerShell_profile.ps1" -LocalFile $PROFILE 
+Update-RemoteFile -RemoteURL "https://raw.githubusercontent.com/der-faebu/powershell-profile/refs/heads/main/Microsoft.PowerShell_profile.ps1" -LocalFile $PROFILE 
 
 # Import Terminal Icons
 if ($PSVersionTable.PSEdition -eq "Core" ) {
