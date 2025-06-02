@@ -126,6 +126,25 @@ if ($PSVersionTable.PSEdition -eq "Core" ) {
     Import-Module -Name Terminal-Icons -ErrorAction Stop
 }
 
+function Optimize-Object {
+    [Alias('Optimise', 'Optimize', 'Optimise-Object')]
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [psobject]$InputObject
+    )
+
+    process {
+        $sortedProperties = [ordered]@{}
+        $InputObject.PSObject.Properties |
+        Sort-Object Name |
+        ForEach-Object {
+            $sortedProperties[$_.Name] = $_.Value
+        }
+
+        [pscustomobject]$sortedProperties
+    }
+}
 function IsAdmin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal $identity
