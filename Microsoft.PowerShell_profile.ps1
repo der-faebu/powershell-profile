@@ -126,6 +126,63 @@ if ($PSVersionTable.PSEdition -eq "Core" ) {
     Import-Module -Name Terminal-Icons -ErrorAction Stop
 }
 
+function Test-NetConnectionFromURI {
+    <#
+    .SYNOPSIS
+    Tests network connectivity using Test-NetConnection based on a URI.
+    
+    .DESCRIPTION
+    Takes a URI as input, extracts the hostname/IP and port, then invokes Test-NetConnection.
+    Only uses the host part of the URI (ignoring path, query parameters, etc.).
+    
+    .PARAMETER Uri
+    The URI to test connectivity for. Can include protocol, port, path, etc.
+    
+    .EXAMPLE
+    Test-NetConnectionFromURI -Uri "http://192.168.100.100:8560"
+    Tests connectivity to 192.168.100.100 on port 8560
+    
+    .EXAMPLE
+    Test-NetConnectionFromURI -Uri "https://example.com:443/path/to/resource"
+    Tests connectivity to example.com on port 443
+    
+    .EXAMPLE
+    Test-NetConnectionFromURI -Uri "http://localhost"
+    Tests connectivity to localhost on port 80
+    #>
+    
+    [CmdletBinding()]
+    [Alias('tncuri', 'tnc-uri', 'tncu')]
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [string]$Uri
+    )
+    
+    process {
+        try {
+            $uriObj = [System.Uri]$Uri
+        }
+        catch {
+            throw "Invalid URI format: $Uri. Error: $($_.Exception.Message)"
+        }
+        
+        $computerName = $uriObj.Host
+        
+        $port = $uriObj.Port
+        if ($port -eq -1) {
+            switch ($uriObj.Scheme.ToLower()) {
+                'http' { $port = 80 }
+                'https' { $port = 443 }
+                default { 
+                    throw "Unsupported scheme '$($uriObj.Scheme)'. Only HTTP, HTTPS, and FTP are supported."
+                }
+            }
+        }
+        Test-NetConnection -ComputerName $computerName -Port $port
+    }
+}
+
+
 function Optimize-Object {
     [Alias('Optimise', 'Optimize', 'Optimise-Object')]
     [CmdletBinding()]
