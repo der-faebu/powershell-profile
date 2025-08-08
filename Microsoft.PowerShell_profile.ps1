@@ -145,6 +145,10 @@ function Optimize-Object {
         [pscustomobject]$sortedProperties
     }
 }
+
+function killpwsh {
+    Get-Process -Name pwsh | Stop-Process -Force
+}
 function IsAdmin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal $identity
