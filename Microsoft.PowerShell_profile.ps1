@@ -57,15 +57,15 @@ function Update-RemoteFile {
     [CmdletBinding(DefaultParameterSetName = "Url")]
     param (
         [Parameter(Mandatory, ParameterSetName = "Url", Position = 0)]
-        [ValidateNotNullOrWhiteSpace()]
+        [ValidateNotNullOrEmpty()]
         [string]$RemoteUrl,
 
         [Parameter(Mandatory, ParameterSetName = "File", Position = 0)]
-        [ValidateNotNullOrWhiteSpace()]
+        [ValidateNotNullOrEmpty()]
         [string]$RemoteFile,
 
         [Parameter(Mandatory, Position = 1)]
-        [ValidateNotNullOrWhiteSpace()]
+        [ValidateNotNullOrEmpty()]
         [string]$LocalFile
     )
 
